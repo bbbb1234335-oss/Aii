@@ -20,7 +20,8 @@ def send_message(chat_id, text):
         print(f"Telegram Send Error: {e}")
 
 def get_ai_reply(user_text):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # পুরাতন URL (এটি কাজ করে)
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
     
     headers = {"Content-Type": "application/json"}
     
@@ -29,7 +30,7 @@ def get_ai_reply(user_text):
             {
                 "role": "user",
                 "parts": [
-                    {"text": f"Respond in the same language as the user. If user writes in Bengali, reply in Bengali. If English, reply in English. User message: {user_text}"}
+                    {"text": f"Reply in the same language as the user message. User message: {user_text}"}
                 ]
             }
         ]
@@ -38,16 +39,18 @@ def get_ai_reply(user_text):
     try:
         response = requests.post(url, headers=headers, json=payload)
         result = response.json()
-
+        
+        print(f"API Response: {result}")  # ডিবাগ করার জন্য
+        
         if "candidates" in result and len(result["candidates"]) > 0:
             return result["candidates"][0]["content"]["parts"][0]["text"]
         elif "error" in result:
-            return f"❌ API Error: {result['error']['message']}"
+            return f"❌ Error: {result['error']['message']}"
         else:
-            return "❌ AI কোনো রেসপন্স দিতে পারছে না।"
+            return "❌ Sorry, could not get response."
             
     except Exception as e:
-        return f"❌ Gemini API Error: {e}"
+        return f"❌ Error: {str(e)}"
 
 def get_updates(offset=None):
     url = API_URL + "getUpdates"
@@ -59,7 +62,7 @@ def get_updates(offset=None):
         return {"result": []}
 
 def main():
-    print("🤖 বট চালু হয়েছে এবং আপনার মেসেজের অপেক্ষায় আছে...")
+    print("🤖 Bot is running...")
     last_update_id = None
     
     while True:
@@ -72,13 +75,13 @@ def main():
                         chat_id = update["message"]["chat"]["id"]
                         text = update["message"].get("text")
                         if text:
-                            print(f"👤 User: {text}")
+                            print(f"User: {text}")
                             reply = get_ai_reply(text)
-                            print(f"🤖 Bot: {reply}")
+                            print(f"Bot: {reply}")
                             send_message(chat_id, reply)
             time.sleep(1)
         except Exception as e:
-            print(f"❌ Loop Error: {e}")
+            print(f"Loop Error: {e}")
             time.sleep(5)
 
 if __name__ == "__main__":
