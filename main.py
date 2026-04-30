@@ -2,7 +2,7 @@ import requests
 import json
 import time
 
-# এখানে আপনার তথ্যগুলো
+# আপনার সঠিক টোকেন ও কী
 BOT_TOKEN = "8723161762:AAGt2nsdZmOvfUAhlqyCr9AY3mNc8M4FnEI"
 GEMINI_API_KEY = "AIzaSyBKNyyGPjlYyKEsc_v5hFtEGT-DBecjF64"
 
@@ -17,25 +17,34 @@ def send_message(chat_id, text):
         print(f"Telegram Send Error: {e}")
 
 def get_ai_reply(user_text):
-    # মডেল নাম পরিবর্তন করে gemini-1.5-flash দেয়া হয়েছে
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # ইউআরএল-এ v1 ব্যবহার করা হয়েছে এবং মডেলের নাম ঠিক করা হয়েছে
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     
     headers = {"Content-Type": "application/json"}
-    data = {
-        "contents": [{"parts": [{"text": user_text}]}]
+    
+    # ইনস্ট্রাকশন যোগ করা হয়েছে যাতে ইউজারের ভাষা অনুযায়ী উত্তর দেয়
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": f"Instruction: Respond in the same language the user uses. If they speak Bengali, reply in Bengali. User message: {user_text}"}
+                ]
+            }
+        ]
     }
 
     try:
-        response = requests.post(url, headers=headers, data=json.dumps(data))
+        response = requests.post(url, headers=headers, data=json.dumps(payload))
         result = response.json()
 
         if "candidates" in result and len(result["candidates"]) > 0:
             return result["candidates"][0]["content"]["parts"][0]["text"]
         elif "error" in result:
-            print(f"API Error: {result['error']['message']}")
+            # এরর মেসেজটি বটে দেখাবে যাতে আমরা বুঝতে পারি
             return f"❌ API Error: {result['error']['message']}"
         else:
-            return "❌ AI কিছু বলতে পারছে না। কোটা শেষ বা সেফটি ইস্যু হতে পারে।"
+            return "❌ AI কোনো রেসপন্স দিতে পারছে না (Safety Filter বা অন্য সমস্যা)।"
             
     except Exception as e:
         return f"❌ Gemini API Error: {e}"
@@ -50,7 +59,7 @@ def get_updates(offset=None):
         return {"result": []}
 
 def main():
-    print("বট চালু হয়েছে...")
+    print("বট চালু হয়েছে এবং আপনার মেসেজের অপেক্ষায় আছে...")
     last_update_id = None
     while True:
         try:
@@ -62,7 +71,7 @@ def main():
                         chat_id = update["message"]["chat"]["id"]
                         text = update["message"].get("text")
                         if text:
-                            print(f"User says: {text}")
+                            print(f"User: {text}")
                             reply = get_ai_reply(text)
                             send_message(chat_id, reply)
             time.sleep(1)
